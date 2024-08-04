@@ -61,6 +61,7 @@ $ npm run test:cov
 - ResponseInterceptor: Interceptor for formatting responses.
 - GetCountrySchemaByName: Zod schema for validating country name input.
 - readZodInputError: Function for handling Zod validation errors.
+- swagger: Used for generating and serving API documentation.
 
 ## Error Handling
 
