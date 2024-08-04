@@ -1,0 +1,7 @@
+node_modules
+dist
+src/mail/mail-templates
+prisma/generated
+prisma/seed.ts
+package.json
+package-lock.json
