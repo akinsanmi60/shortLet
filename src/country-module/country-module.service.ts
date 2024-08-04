@@ -1,27 +1,64 @@
 import { Injectable, NotFoundException, UseInterceptors } from '@nestjs/common';
 import { ServiceFetchersService } from '../service-fetchers/service-fetchers.service';
 import { ResponseInterceptor } from '../filter/responseFilter/respone.service';
-import { GetCountryByNameDto } from './dto';
+import { GetAllCountryDto, GetCountryByNameDto } from './dto';
 import { GetCountrySchemaByName } from '../validations';
 import { ZodError } from 'zod';
 import { readZodInputError } from '../validations/genericErrorReader';
+import { Country } from '../service-fetchers/type';
 
 @UseInterceptors(ResponseInterceptor)
 @Injectable()
 export class CountryModuleService {
+  private countriesCache: Country[] = []; // Cache to store countries data
+  private cacheTimestamp: number = 0; // Timestamp to invalidate cache after a certain period
+  private cacheDuration: number = 60 * 60 * 1000; // Cache duration set to 1 hour
   constructor(
     private readonly serviceFetchersService: ServiceFetchersService,
   ) {}
 
-  async getAllCountries() {
-    const response = await this.serviceFetchersService.getAllCountries();
-    if (!response) {
-      throw new Error('Error fetching countries');
+  private paginate(data: any[], page: number, limit: number) {
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    return data.slice(start, end);
+  }
+
+  async getAllCountries(dto: GetAllCountryDto) {
+    const page = Number(dto.page) || 1;
+    const limit = Number(dto.limit) || 10;
+
+    const currentTime = Date.now();
+
+    // Check if cache is empty or expired
+    if (
+      !this.countriesCache.length ||
+      currentTime - this.cacheTimestamp > this.cacheDuration
+    ) {
+      const response = await this.serviceFetchersService.getAllCountries();
+      if (!response) {
+        throw new Error('Error fetching countries');
+      }
+
+      // Cache the response and update the timestamp
+      this.countriesCache = response;
+      this.cacheTimestamp = currentTime;
     }
+
+    // Paginate the cached data
+    const paginatedData = this.paginate(this.countriesCache, page, limit);
+    const totalPage = Math.ceil(this.countriesCache.length / limit);
 
     return {
       message: 'Fetched all countries from API service was successful',
-      data: response,
+      data: {
+        meta: {
+          totalItems: this.countriesCache.length,
+          currentPage: page,
+          totalPages: totalPage,
+          perPage: limit,
+        },
+        countries: paginatedData,
+      },
     };
   }
 

@@ -6,8 +6,9 @@ import { ZodError } from 'zod';
 import { readZodInputError } from '../validations/genericErrorReader';
 import { GetCountryByNameDto } from './dto';
 import { GetCountrySchemaByName } from '../validations';
-import { Country } from './response-dto';
+// import { Country } from './response-dto';
 import { countryMockUp } from './mock-up';
+import { Country } from '../service-fetchers/type';
 
 describe('CountryModuleService', () => {
   let service: CountryModuleService;
@@ -39,20 +40,54 @@ describe('CountryModuleService', () => {
       ServiceFetchersService,
     );
   });
-
   describe('getAllCountries', () => {
-    it('should return a success message and data if countries are fetched successfully', async () => {
-      const countries = countryMockUp as unknown as Country[];
+    const dto = { page: '1', limit: '10' };
+    const countries = countryMockUp as unknown as Country[];
 
+    it('should return a success message and paginated data if countries are fetched successfully', async () => {
       jest
         .spyOn(serviceFetchersService, 'getAllCountries')
         .mockResolvedValue(countries);
 
-      const result = await service.getAllCountries();
+      const result = await service.getAllCountries(dto);
 
       expect(result).toEqual({
         message: 'Fetched all countries from API service was successful',
-        data: countries,
+        data: {
+          meta: {
+            totalItems: countries.length,
+            currentPage: parseInt(dto.page),
+            perPage: parseInt(dto.limit),
+            totalPages: Math.ceil(countries.length / parseInt(dto.limit)),
+          },
+          countries: countries.slice(0, parseInt(dto.limit)),
+        },
+      });
+
+      expect(serviceFetchersService.getAllCountries).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return cached data without fetching from the API again', async () => {
+      service['countriesCache'] = countryMockUp as unknown as Country[]; // Manually set cache
+      service['cacheTimestamp'] = Date.now(); // Set recent timestamp
+
+      const result = await service.getAllCountries(dto),
+        mockCountriesData = countryMockUp as unknown as Country[];
+
+      expect(serviceFetchersService.getAllCountries).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        message: 'Fetched all countries from API service was successful',
+        data: {
+          meta: {
+            totalItems: mockCountriesData.length,
+            currentPage: parseInt(dto.page),
+            totalPages: Math.ceil(
+              mockCountriesData.length / parseInt(dto.limit),
+            ),
+            perPage: parseInt(dto.limit),
+          },
+          countries: mockCountriesData.slice(0, parseInt(dto.limit)),
+        },
       });
     });
 
@@ -61,7 +96,7 @@ describe('CountryModuleService', () => {
         .spyOn(serviceFetchersService, 'getAllCountries')
         .mockResolvedValue(null);
 
-      await expect(service.getAllCountries()).rejects.toThrow(
+      await expect(service.getAllCountries(dto)).rejects.toThrow(
         'Error fetching countries',
       );
     });

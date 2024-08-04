@@ -10,3 +10,13 @@ export class GetCountryByNameDto {
   @IsNotEmpty()
   countryName: string;
 }
+
+export class GetAllCountryDto {
+  @ApiProperty({ example: '1', required: false })
+  @IsString()
+  page: string;
+
+  @ApiProperty({ example: '10', required: false })
+  @IsString()
+  limit: string;
+}

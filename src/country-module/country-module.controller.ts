@@ -2,7 +2,7 @@ import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { CountryModuleService } from './country-module.service';
 import { ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CountryResponseDto } from './response-dto';
-import { GetCountryByNameDto } from './dto';
+import { GetAllCountryDto, GetCountryByNameDto } from './dto';
 
 ApiTags('Countries');
 @Controller('country')
@@ -10,12 +10,13 @@ export class CountryModuleController {
   constructor(private readonly countryModuleService: CountryModuleService) {}
 
   @Get('/getAllCountries')
+  @ApiQuery({ type: GetAllCountryDto })
   @ApiResponse({
     description: 'This endpoint will return all Countries',
     type: CountryResponseDto,
   })
-  getAllCountries() {
-    return this.countryModuleService.getAllCountries();
+  getAllCountries(@Query() dto) {
+    return this.countryModuleService.getAllCountries(dto);
   }
 
   @Get('/getCountryByName')
